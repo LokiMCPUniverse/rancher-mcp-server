@@ -1,71 +1,78 @@
 # Rancher MCP Server
 
-<div align="center">
-
-# Rancher Mcp Server
-
-[![GitHub stars](https://img.shields.io/github/stars/LokiMCPUniverse/rancher-mcp-server?style=social)](https://github.com/LokiMCPUniverse/rancher-mcp-server/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/LokiMCPUniverse/rancher-mcp-server?style=social)](https://github.com/LokiMCPUniverse/rancher-mcp-server/network)
-[![GitHub watchers](https://img.shields.io/github/watchers/LokiMCPUniverse/rancher-mcp-server?style=social)](https://github.com/LokiMCPUniverse/rancher-mcp-server/watchers)
-
-[![License](https://img.shields.io/github/license/LokiMCPUniverse/rancher-mcp-server?style=for-the-badge)](https://github.com/LokiMCPUniverse/rancher-mcp-server/blob/main/LICENSE)
-[![Issues](https://img.shields.io/github/issues/LokiMCPUniverse/rancher-mcp-server?style=for-the-badge)](https://github.com/LokiMCPUniverse/rancher-mcp-server/issues)
-[![Pull Requests](https://img.shields.io/github/issues-pr/LokiMCPUniverse/rancher-mcp-server?style=for-the-badge)](https://github.com/LokiMCPUniverse/rancher-mcp-server/pulls)
-[![Last Commit](https://img.shields.io/github/last-commit/LokiMCPUniverse/rancher-mcp-server?style=for-the-badge)](https://github.com/LokiMCPUniverse/rancher-mcp-server/commits)
-
-[![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![MCP](https://img.shields.io/badge/Model_Context_Protocol-DC143C?style=for-the-badge)](https://modelcontextprotocol.io)
-
-[![Commit Activity](https://img.shields.io/github/commit-activity/m/LokiMCPUniverse/rancher-mcp-server?style=flat-square)](https://github.com/LokiMCPUniverse/rancher-mcp-server/pulse)
-[![Code Size](https://img.shields.io/github/languages/code-size/LokiMCPUniverse/rancher-mcp-server?style=flat-square)](https://github.com/LokiMCPUniverse/rancher-mcp-server)
-[![Contributors](https://img.shields.io/github/contributors/LokiMCPUniverse/rancher-mcp-server?style=flat-square)](https://github.com/LokiMCPUniverse/rancher-mcp-server/graphs/contributors)
-
-</div>
-
-A Model Context Protocol (MCP) server for integrating Rancher with GenAI applications.
-
-## Overview
-
-Kubernetes management and deployment platform
+A Model Context Protocol (MCP) server that exposes the Rancher Manager v2.x
+API to LLM clients. Built on the official `mcp` Python SDK (FastMCP) with
+async HTTP via `httpx` and settings management via `pydantic-settings`.
 
 ## Features
 
-- Comprehensive Rancher API coverage
-- Multiple authentication methods
-- Enterprise-ready with rate limiting
-- Full error handling and retry logic
-- Async support for better performance
+- Bearer-token authentication using a Rancher API key (`token-xxx:yyy...`).
+- Cluster, project, and node discovery against the `/v3` management API.
+- Kubernetes resource queries (`namespaces`, `pods`, `deployments`, pod logs)
+  through Rancher's `/k8s/clusters/{cluster_id}` proxy.
+- Deployment scaling via strategic-merge PATCH on the `/scale` subresource.
+- Catalog app listing and on-demand kubeconfig generation.
+
+## Requirements
+
+- Python 3.10+
+- A Rancher Manager instance reachable over HTTPS.
+- An API token generated from the Rancher UI (Account -> API & Keys). The
+  token must be passed in the full `token-xxx:yyy...` form.
 
 ## Installation
 
 ```bash
-pip install rancher-mcp-server
-```
-
-Or install from source:
-
-```bash
-git clone https://github.com/asklokesh/rancher-mcp-server.git
-cd rancher-mcp-server
-pip install -e .
+pip install -e ".[dev]"
 ```
 
 ## Configuration
 
-Create a `.env` file or set environment variables according to Rancher API requirements.
+Configure the server through environment variables (prefix `RANCHER_`) or a
+`.env` file in the working directory:
 
-## Quick Start
+| Variable               | Description                                     | Default               |
+| ---------------------- | ----------------------------------------------- | --------------------- |
+| `RANCHER_BASE_URL`     | Rancher Manager base URL (no trailing slash).   | `https://localhost`   |
+| `RANCHER_API_TOKEN`    | API token in `token-xxx:yyy...` format.         | *(required)*          |
+| `RANCHER_VERIFY_SSL`   | Verify TLS certificates.                        | `true`                |
+| `RANCHER_TIMEOUT`      | HTTP timeout in seconds.                        | `60`                  |
 
-```python
-from rancher_mcp import RancherMCPServer
+## Running
 
-# Initialize the server
-server = RancherMCPServer()
+```bash
+rancher-mcp
+```
 
-# Start the server
-server.start()
+The server speaks MCP over stdio and can be wired into any MCP-capable
+client (Claude Desktop, Cursor, custom agents, and so on).
+
+## Tools
+
+| Tool                  | Description                                            |
+| --------------------- | ------------------------------------------------------ |
+| `list_clusters`       | List all managed clusters.                             |
+| `get_cluster`         | Fetch one cluster by ID.                               |
+| `list_projects`       | List projects, optionally scoped to a cluster.         |
+| `list_nodes`          | List nodes in a cluster.                               |
+| `list_namespaces`     | List Kubernetes namespaces via the Rancher proxy.      |
+| `list_pods`           | List pods (optionally namespace-scoped).               |
+| `list_deployments`    | List Deployments (optionally namespace-scoped).        |
+| `get_pod_logs`        | Tail pod logs.                                         |
+| `scale_deployment`    | Scale a Deployment via the `/scale` subresource.       |
+| `list_catalog_apps`   | List catalog apps installed in a cluster.              |
+| `create_kubeconfig`   | Generate a kubeconfig for a cluster.                   |
+
+## Development
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+pytest -x --tb=short
+ruff check src tests
 ```
 
 ## License
 
-MIT License - see LICENSE file for details
+MIT License - see LICENSE file for details.
